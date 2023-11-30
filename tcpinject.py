@@ -4,13 +4,14 @@ import threading
 import ssl
 
 class conn_:
-    def __init__(self,conn,handle_func,ignore_empty,srcip,srcport,socks5_proxy=None):
+    def __init__(self,conn,handle_func,ignore_empty,srcip,srcport,socks5_proxy=None,thread_data=None):
         self.conn = conn
         self.handle_func = handle_func
         self.ignore_empty = ignore_empty
         self.socks5_proxy = socks5_proxy
         self.srcip = srcip
         self.srcport = srcport
+        self.thread_data = thread_data
 
     def start(self,rport,rip,use_ssl):
         self.remote_conn = socks.socksocket()
@@ -56,7 +57,7 @@ class conn_:
                 break
 
 
-def start_deamon(srcip:str,rip:str,srcport:int,rport:int,listen:int,handle_func,ignore_empty=False,socks5_proxy=None,use_ssl=False,cert_pair=None):
+def start_deamon(srcip:str,rip:str,srcport:int,rport:int,listen:int,handle_func,ignore_empty=False,socks5_proxy=None,use_ssl=False,cert_pair=None,thread_data:str=None):
 
     #srcip is your ip
     #rip is remote ip of server
@@ -83,13 +84,13 @@ def start_deamon(srcip:str,rip:str,srcport:int,rport:int,listen:int,handle_func,
     while True:
         try:
             c,a = s.accept()
-            conn = conn_(c,handle_func,ignore_empty,srcip,srcport,socks5_proxy)
+            conn = conn_(c,handle_func,ignore_empty,srcip,srcport,socks5_proxy,thread_data)
             threading.Thread(target=conn.start,args=(rport,rip,use_ssl)).start()
         except (ConnectionError,ssl.SSLError) as e:
             print('Error',e)
 
 
-def start_deamon_thread(srcip:str,rip:str,srcport:int,rport:int,listen:int,handle_func,ignore_empty=False,socks5_proxy=None,use_ssl=False,cert_pair=None):
+def start_deamon_thread(srcip:str,rip:str,srcport:int,rport:int,listen:int,handle_func,ignore_empty=False,socks5_proxy=None,use_ssl=False,cert_pair=None,thread_data:str=None):
     threading.Thread(target=start_deamon,args=(srcip,
                                                rip,
                                                srcport,
@@ -97,14 +98,15 @@ def start_deamon_thread(srcip:str,rip:str,srcport:int,rport:int,listen:int,handl
                                                listen,
                                                handle_func,ignore_empty,socks5_proxy,
                                                use_ssl,
-                                               cert_pair)).start()
+                                               cert_pair,
+                                               thread_data)).start()
 
 class packet:
     def __init__(self,packet,conn,from_user:bool,conn_):
         self.conn = conn
         self.packet =  packet
         self.from_user = from_user
-        self.conn_ = conn_
+        self.connobj = conn_
 
     def send(self):
         self.conn.send(self.packet)
@@ -114,4 +116,7 @@ class packet:
 
     def set(self,data):
         self.packet = data
+
+    def replace(self,str0,str1):
+        self.packet = self.packet.replace(str0,str1)
         
